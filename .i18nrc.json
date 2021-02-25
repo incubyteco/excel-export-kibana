@@ -1,0 +1,7 @@
+{
+  "prefix": "excelExport",
+  "paths": {
+    "excelExport": "."
+  },
+  "translations": ["translations/ja-JP.json"]
+}
