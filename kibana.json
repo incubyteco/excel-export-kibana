@@ -4,6 +4,12 @@
   "kibanaVersion": "kibana",
   "server": false,
   "ui": true,
-  "requiredPlugins": [],
-  "optionalPlugins": []
+  "requiredPlugins": [
+    "uiActions",
+    "embeddable"
+  ],
+  "optionalPlugins": [],
+  "requiredBundles": [
+    "discover"
+  ]
 }

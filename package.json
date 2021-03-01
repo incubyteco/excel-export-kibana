@@ -8,5 +8,8 @@
     "kbn": "node ../../scripts/kbn",
     "test": "node ../../scripts/jest"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "dependencies": {
+    "xlsx": "^0.16.9"
+  }
 }
