@@ -6,10 +6,8 @@
   "ui": true,
   "requiredPlugins": [
     "uiActions",
-    "embeddable"
-  ],
-  "optionalPlugins": [],
-  "requiredBundles": [
+    "embeddable",
     "discover"
-  ]
+  ],
+  "optionalPlugins": []
 }
