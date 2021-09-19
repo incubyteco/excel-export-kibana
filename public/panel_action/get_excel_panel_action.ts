@@ -1,15 +1,16 @@
-import _ from 'lodash';
 import moment from 'moment-timezone';
-import dateMath from '@elastic/datemath';
 import { CoreSetup } from 'src/core/public';
 import { writeFile, read } from 'xlsx';
+import { IncompatibleActionError } from '../../../../src/plugins/ui_actions/public';
+import type { UiActionsActionDefinition as ActionDefinition } from '../../../../src/plugins/ui_actions/public';
+import type { ISearchEmbeddable, SavedSearch } from '../../../../src/plugins/discover/public';
 import {
-  IncompatibleActionError,
-  UiActionsActionDefinition as ActionDefinition,
-} from '../../../../src/plugins/ui_actions/public';
-import { ISearchEmbeddable, SEARCH_EMBEDDABLE_TYPE } from '../../../../src/plugins/discover/public';
+  loadSharingDataHelpers,
+  SEARCH_EMBEDDABLE_TYPE,
+} from '../../../../src/plugins/discover/public';
 import { IEmbeddable, ViewMode } from '../../../../src/plugins/embeddable/public';
 import { API_GENERATE_IMMEDIATE } from '../../common/constants';
+import type { JobParamsDownloadCSV } from '../../../../x-pack/plugins/reporting/server/export_types/csv_searchsource_immediate/types';
 
 interface ActionContext {
   embeddable: ISearchEmbeddable;
@@ -45,17 +46,13 @@ export class GetExcelPanelAction implements ActionDefinition<ActionContext> {
     return 'Export as Excel';
   }
 
-  public getSearchRequestBody({ searchEmbeddable }: { searchEmbeddable: any }) {
-    const adapters = searchEmbeddable.getInspectorAdapters();
-    if (!adapters) {
-      return {};
-    }
-
-    if (adapters.requests.requests.length === 0) {
-      return {};
-    }
-
-    return searchEmbeddable.getSavedSearch().searchSource.getSearchRequestBody();
+  public async getSearchSource(savedSearch: SavedSearch, embeddable: ISearchEmbeddable) {
+    const { getSharingData } = await loadSharingDataHelpers();
+    return await getSharingData(
+      savedSearch.searchSource,
+      savedSearch, // TODO: get unsaved state (using embeddale.searchScope): https://github.com/elastic/kibana/issues/43977
+      this.core.uiSettings
+    );
   }
 
   public execute = async (context: ActionContext) => {
@@ -69,34 +66,20 @@ export class GetExcelPanelAction implements ActionDefinition<ActionContext> {
       return;
     }
 
-    const {
-      timeRange: { to, from },
-    } = embeddable.getInput();
+    const savedSearch = embeddable.getSavedSearch();
+    const { columns, searchSource } = await this.getSearchSource(savedSearch, embeddable);
 
-    const searchEmbeddable = embeddable;
-    const searchRequestBody = await this.getSearchRequestBody({ searchEmbeddable });
-    const state = _.pick(searchRequestBody, ['sort', 'docvalue_fields', 'query']);
     const kibanaTimezone = this.core.uiSettings.get('dateFormat:tz');
+    const browserTimezone = kibanaTimezone === 'Browser' ? moment.tz.guess() : kibanaTimezone;
 
-    const id = `search:${embeddable.getSavedSearch().id}`;
-    const timezone = kibanaTimezone === 'Browser' ? moment.tz.guess() : kibanaTimezone;
-    const fromTime = dateMath.parse(from);
-    const toTime = dateMath.parse(to, { roundUp: true });
+    const immediateJobParams: JobParamsDownloadCSV = {
+      searchSource,
+      columns,
+      browserTimezone,
+      title: savedSearch.title,
+    };
 
-    if (!fromTime || !toTime) {
-      return this.onGenerationFail(
-        new Error(`Invalid time range: From: ${fromTime}, To: ${toTime}`)
-      );
-    }
-
-    const body = JSON.stringify({
-      timerange: {
-        min: fromTime.format(),
-        max: toTime.format(),
-        timezone,
-      },
-      state,
-    });
+    const body = JSON.stringify(immediateJobParams);
 
     this.isDownloading = true;
 
@@ -107,7 +90,7 @@ export class GetExcelPanelAction implements ActionDefinition<ActionContext> {
     });
 
     await this.core.http
-      .post(`${API_GENERATE_IMMEDIATE}/${id}`, { body })
+      .post(`${API_GENERATE_IMMEDIATE}`, { body })
       .then((rawResponse: string) => {
         this.isDownloading = false;
 
