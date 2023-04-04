@@ -1,5 +1,8 @@
 {
   "id": "excelExport",
+  "owner": {
+	  "name": "excelExport"
+  },
   "version": "1.0.0",
   "kibanaVersion": "kibana",
   "server": false,

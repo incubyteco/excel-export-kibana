@@ -50,8 +50,8 @@ export class GetExcelPanelAction implements ActionDefinition<ActionContext> {
     const { getSharingData } = await loadSharingDataHelpers();
     return await getSharingData(
       savedSearch.searchSource,
-      savedSearch, // TODO: get unsaved state (using embeddale.searchScope): https://github.com/elastic/kibana/issues/43977
-      this.core.uiSettings
+      savedSearch, // TODO: get unsaved state (using embeddable.searchScope): https://github.com/elastic/kibana/issues/43977
+      embeddable.services
     );
   }
 
@@ -67,13 +67,13 @@ export class GetExcelPanelAction implements ActionDefinition<ActionContext> {
     }
 
     const savedSearch = embeddable.getSavedSearch();
-    const { columns, searchSource } = await this.getSearchSource(savedSearch, embeddable);
+    const { columns, getSearchSource } = await this.getSearchSource(savedSearch, embeddable);
 
     const kibanaTimezone = this.core.uiSettings.get('dateFormat:tz');
     const browserTimezone = kibanaTimezone === 'Browser' ? moment.tz.guess() : kibanaTimezone;
 
     const immediateJobParams: JobParamsDownloadCSV = {
-      searchSource,
+      searchSource: getSearchSource(),
       columns,
       browserTimezone,
       title: savedSearch.title,
