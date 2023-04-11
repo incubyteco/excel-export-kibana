@@ -1,6 +1,9 @@
 {
   "id": "excelExport",
-  "version": "1.0.0",
+  "owner": {
+	  "name": "excelExport"
+  },
+  "version": "8.6.2",
   "kibanaVersion": "kibana",
   "server": false,
   "ui": true,
